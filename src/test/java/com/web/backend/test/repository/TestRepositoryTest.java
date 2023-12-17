@@ -18,7 +18,8 @@ class TestRepositoryTest {
     void findAll() {
         List<Language> all = testRepository.findAll();
         for (Language language : all) {
-            System.out.println("language.getId() = " + language.getTitle());
+            System.out.println(language.toString());
+//            System.out.println("language.getId() = " + language.getTitle());
         }
     }
 

@@ -1,6 +1,8 @@
 package com.web.backend.test.controller;
 
+import com.web.backend.test.domain.Language;
 import com.web.backend.test.service.TestService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,12 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TestController {
 
+    private final TestService testService;
 
-    @GetMapping("api/{test}")
-    public String test(
-            @PathVariable String test
+    @GetMapping("api")
+    public List<Language> test(
     ) {
-        return test;
+        return testService.findAll();
     }
 
 }

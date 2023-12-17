@@ -23,6 +23,7 @@ repositories {
 }
 
 dependencies {
+
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -34,6 +35,10 @@ dependencies {
 
 	//jpa
 //	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	//xml to json
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.3'
+
 }
 
 tasks.named('test') {

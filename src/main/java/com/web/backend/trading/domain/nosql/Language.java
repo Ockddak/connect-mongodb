@@ -1,4 +1,4 @@
-package com.web.backend.test.domain;
+package com.web.backend.trading.domain.nosql;
 
 import lombok.Getter;
 import lombok.ToString;

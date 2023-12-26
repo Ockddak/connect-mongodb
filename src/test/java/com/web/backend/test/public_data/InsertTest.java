@@ -2,16 +2,19 @@ package com.web.backend.test.public_data;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.web.backend.trading.domain.TownHouse;
-import com.web.backend.trading.repository.TownHouseMongoRepository;
+import com.web.backend.trading.domain.nosql.TownHouse;
+import com.web.backend.trading.repository.nosql.TownHouseMongoRepository;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,8 +40,10 @@ public class InsertTest {
             // XmlMapper를 생성하여 XML 파싱
             ObjectMapper xmlMapper = new XmlMapper();
             JsonNode jsonNode = xmlMapper.readTree(xmlString.getBytes());
-            JsonNode items = jsonNode.path("body").path("items");
-
+            JsonNode body = jsonNode.path("body");
+            JsonNode items = body.path("items");
+            JsonNode totalCount = body.path("totalCount");
+            System.out.println("totalCount: " + totalCount);
             JsonNode item = items.get("item");
 
             // JsonNode를 JSONObject로 변환
@@ -59,66 +64,52 @@ public class InsertTest {
 
     @Test
     @DisplayName("xml to json")
-    void xmlToJson() throws IOException, JSONException {
+    void xmlToJson() throws IOException {
 
+        String requestURL = getRequestURL("111111", "111111");
+        URL url = new URL(requestURL);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Content-type", "application/json");
+        System.out.println("Response code: " + conn.getResponseCode());
+        BufferedReader rd;
+        if (conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
+            rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        } else {
+            rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+        }
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = rd.readLine()) != null) {
+            sb.append(line);
+        }
+        rd.close();
+        conn.disconnect();
 
-//        URL url = new URL(urlBuilder.toString());
-//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//        conn.setRequestMethod("GET");
-//        conn.setRequestProperty("Content-type", "application/json");
-//        System.out.println("Response code: " + conn.getResponseCode());
-//        BufferedReader rd;
-//        if (conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
-//            rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-//        } else {
-//            rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-//        }
-//        StringBuilder sb = new StringBuilder();
-//        String line;
-//        while ((line = rd.readLine()) != null) {
-//            sb.append(line);
-//        }
-//        rd.close();
-//        conn.disconnect();
-//
-//        // StringBuilder에 저장된 XML 데이터를 문자열로 변환
-//        String xmlData = sb.toString();
-//        System.out.println("xmlData = " + xmlData);
-//
-//        List<TownHouse> townHouses = convertXmlStringToJson(xmlData);
-//
-//        while (townHouses.size() <= 10000) {
-//            townHouses.addAll(townHouses);
-//        }
-//        System.out.println("townHouses.size() = " + townHouses.size());
-//
-//        System.out.println("saveAll");
-//        long start = System.currentTimeMillis();
-//        townHouseRepository.saveAll(townHouses);
-//        long end = System.currentTimeMillis();
-//        System.out.println("end-start = " + (end - start));
-//
-//        System.out.println("saveOne");
-//        start = System.currentTimeMillis();
-//        for (TownHouse townHouse : townHouses) {
-//            townHouseRepository.save(townHouse);
-//        }
-//        end = System.currentTimeMillis();
-//        System.out.println("end-start = " + (end - start));
+        // StringBuilder에 저장된 XML 데이터를 문자열로 변환
+        String xmlData = sb.toString();
+        System.out.println("xmlData = " + xmlData);
 
-//        System.out.println("insertAll");
-//        start = System.currentTimeMillis();
-//        townHouseRepository.insert(townHouses);
-//        end = System.currentTimeMillis();
-//        System.out.println("end-start = " + (end - start));
-//
-//        System.out.println("insertOne");
-//        start = System.currentTimeMillis();
-//        for (TownHouse townHouse : townHouses) {
-//            townHouseRepository.insert(townHouse);
-//        }
-//        end = System.currentTimeMillis();
-//        System.out.println("end-start = " + (end - start));
+        List<TownHouse> townHouses = convertXmlStringToJson(xmlData);
+
+        while (townHouses.size() <= 10000) {
+            townHouses.addAll(townHouses);
+        }
+        System.out.println("townHouses.size() = " + townHouses.size());
+
+        System.out.println("saveAll");
+        long start = System.currentTimeMillis();
+        townHouseMongoRepository.saveAll(townHouses);
+        long end = System.currentTimeMillis();
+        System.out.println("end-start = " + (end - start));
+
+        System.out.println("saveOne");
+        start = System.currentTimeMillis();
+        for (TownHouse townHouse : townHouses) {
+            townHouseMongoRepository.save(townHouse);
+        }
+        end = System.currentTimeMillis();
+        System.out.println("end-start = " + (end - start));
 
     }
 
@@ -135,7 +126,7 @@ public class InsertTest {
                 "&" + URLEncoder.encode("DEAL_YMD", "UTF-8") + "=" + URLEncoder.encode("201512",
                         "UTF-8")); /*월 단위 신고자료*/
 
-        return null;
+        return urlBuilder.toString();
     }
 
     private List<String> getYYYYMM(String start, String end) {
@@ -159,11 +150,4 @@ public class InsertTest {
         return yearMonths;
     }
 
-    @Test
-    void getDate() {
-        List<String> yyyymm = getYYYYMM("202001", "202212");
-        for (String s : yyyymm) {
-            System.out.println("s = " + s);
-        }
-    }
 }

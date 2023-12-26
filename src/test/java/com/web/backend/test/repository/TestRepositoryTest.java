@@ -1,6 +1,7 @@
 package com.web.backend.test.repository;
 
-import com.web.backend.test.domain.Language;
+import com.web.backend.trading.domain.nosql.Language;
+import com.web.backend.trading.repository.nosql.TestRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

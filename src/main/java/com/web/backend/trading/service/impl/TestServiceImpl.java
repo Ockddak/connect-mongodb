@@ -1,7 +1,8 @@
-package com.web.backend.test.service;
+package com.web.backend.trading.service.impl;
 
-import com.web.backend.test.domain.Language;
-import com.web.backend.test.repository.TestRepository;
+import com.web.backend.trading.domain.nosql.Language;
+import com.web.backend.trading.repository.nosql.TestRepository;
+import com.web.backend.trading.service.TestService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

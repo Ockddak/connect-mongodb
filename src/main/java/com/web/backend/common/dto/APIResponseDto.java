@@ -2,11 +2,11 @@ package com.web.backend.common.dto;
 
 import org.springframework.http.HttpStatus;
 
-public class APIResponseDto {
+public class APIResponseDto<T> {
 
-    HttpStatus status;
-    String message;
-    String data;
-    APIExceptionDto exception;
+    private HttpStatus status;
+    private String message;
+    private T data;
+    private APIExceptionDto exception;
 
 }

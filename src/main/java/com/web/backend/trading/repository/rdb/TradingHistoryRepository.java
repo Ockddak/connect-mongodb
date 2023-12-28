@@ -8,5 +8,4 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TradingHistoryRepository extends JpaRepository<TradingHistory, Long> {
 
-    Optional<TradingHistory> findByDate(String date);
 }

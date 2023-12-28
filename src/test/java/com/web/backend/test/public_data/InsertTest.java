@@ -42,8 +42,8 @@ public class InsertTest {
             JsonNode jsonNode = xmlMapper.readTree(xmlString.getBytes());
             JsonNode body = jsonNode.path("body");
             JsonNode items = body.path("items");
-            JsonNode totalCount = body.path("totalCount");
-            System.out.println("totalCount: " + totalCount);
+            int totalCount = Integer.parseInt(String.valueOf(body.path("totalCount")).replace("\"", ""));
+
             JsonNode item = items.get("item");
 
             // JsonNode를 JSONObject로 변환
@@ -92,9 +92,9 @@ public class InsertTest {
 
         List<TownHouse> townHouses = convertXmlStringToJson(xmlData);
 
-        while (townHouses.size() <= 10000) {
-            townHouses.addAll(townHouses);
-        }
+//        while (townHouses.size() <= 10000) {
+//            townHouses.addAll(townHouses);
+//        }
         System.out.println("townHouses.size() = " + townHouses.size());
 
         System.out.println("saveAll");
@@ -103,13 +103,13 @@ public class InsertTest {
         long end = System.currentTimeMillis();
         System.out.println("end-start = " + (end - start));
 
-        System.out.println("saveOne");
-        start = System.currentTimeMillis();
-        for (TownHouse townHouse : townHouses) {
-            townHouseMongoRepository.save(townHouse);
-        }
-        end = System.currentTimeMillis();
-        System.out.println("end-start = " + (end - start));
+//        System.out.println("saveOne");
+//        start = System.currentTimeMillis();
+//        for (TownHouse townHouse : townHouses) {
+//            townHouseMongoRepository.save(townHouse);
+//        }
+//        end = System.currentTimeMillis();
+//        System.out.println("end-start = " + (end - start));
 
     }
 

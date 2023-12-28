@@ -28,6 +28,7 @@ public class TownHouse {
     private String 층;
     private String 해제사유발생일;
     private String 해제여부;
+    private String date;
 
     public void trimAll() {
         this.거래금액 = this.거래금액.trim();
@@ -46,5 +47,7 @@ public class TownHouse {
         this.층 = this.층.trim();
         this.해제사유발생일 = this.해제사유발생일.trim();
         this.해제여부 = this.해제여부.trim();
+        String month = this.월.length() <= 1 ? "0" + this.월 : this.월;
+        this.date = this.년 + month;
     }
 }

@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.web.backend.trading.domain.nosql.TownHouse;
-import com.web.backend.trading.domain.rdb.TradingHistory;
+import com.web.backend.trading.domain.rdb.TradingData;
+import com.web.backend.trading.dto.KakaoAddrResponseDto;
 import com.web.backend.trading.dto.TradingDataRequestDto;
 import com.web.backend.trading.repository.nosql.TownHouseMongoRepository;
+import com.web.backend.trading.repository.rdb.TradingDataRepository;
 import com.web.backend.trading.repository.rdb.TradingHistoryRepository;
 import com.web.backend.trading.service.TradingService;
 import java.io.BufferedReader;
@@ -20,25 +22,37 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class TradingServiceImpl implements TradingService {
 
-    private final String SERVICE_KEY = "wk52r5dzJE%2B%2FE1%2FNlTeXny1gQsMPvFhodPk7aIb6Dm%2FI4nN4MJhEqRN9uAxsH5P7HbvEeD%2BHHFmC8TGr6RIp0A%3D%3D";
+    @Value("${public-data.service.key}")
+    private String SERVICE_KEY;
+    @Value("${kakao.address.api.key}")
+    private String REST_API_KEY;
+
     private final TownHouseMongoRepository townHouseMongoRepository;
     private final TradingHistoryRepository tradingHistoryRepository;
+    private final TradingDataRepository tradingDataRepository;
 
     @Override
-    public List<TradingHistory> getPublicData(TradingDataRequestDto tradingDataRequestDto) {
+    @Transactional
+    public List<String> getPublicData(TradingDataRequestDto tradingDataRequestDto) {
         List<String> dates = getYyyyMm(tradingDataRequestDto.getStartDate(),
                 tradingDataRequestDto.getEndDate());
 
-        List<TradingHistory> tradingHistories = new ArrayList<>();
+        List<String> tradingSuccessDates = new ArrayList<>();
 
         if (!dates.isEmpty()) {
             for (String date : dates) {
@@ -50,12 +64,141 @@ public class TradingServiceImpl implements TradingService {
                     log.error("{} is error search API", date);
                     successYn = "N";
                 }
+
+                if (successYn.equals("Y")) {
+                    tradingSuccessDates.add(date);
+                }
             }
         } else {
             log.error("getYyyyMm method processing error.");
         }
 
-        return tradingHistories;
+        return tradingSuccessDates;
+    }
+
+    @Override
+    @Transactional
+    public List<TradingData> getProcessingKakao(TradingDataRequestDto tradingDataRequestDto) {
+        List<String> dates = getYyyyMm(tradingDataRequestDto.getStartDate(),
+                tradingDataRequestDto.getEndDate());
+        List<TradingData> tradingDataList = new ArrayList<>();
+        for (String date : dates) {
+            List<TradingData> findTradingDataList = tradingDataRepository.findByContractDateAndBCodeStartingWith(
+                    date,
+                    tradingDataRequestDto.getLawdCd());
+
+            if (!findTradingDataList.isEmpty()) {
+                tradingDataList.addAll(findTradingDataList);
+                continue;
+            }
+
+            List<TownHouse> townHouseList = townHouseMongoRepository.findByDateAnd지역코드(
+                    date, tradingDataRequestDto.getLawdCd());
+
+            for (TownHouse townHouse : townHouseList) {
+                String townHouseRequestAddress = makeTownHouseRequestAddress(townHouse);
+                String kakaoResponse;
+                try {
+                    kakaoResponse = kakaoAPIRequest(townHouseRequestAddress);
+                } catch (IOException e) {
+                    log.error("kakaoAPIRequest Error!! {}", e.getMessage());
+                    return new ArrayList<>();
+                }
+                if (!kakaoResponse.equals("not success")) {
+                    try {
+
+                        TradingData resultTradingData = getResultTradingData(kakaoResponse,
+                                townHouse);
+                        if (resultTradingData != null) {
+                            tradingDataRepository.save(resultTradingData);
+                            tradingDataList.add(resultTradingData);
+                        } else {
+                            log.error("failed townHouse: {}", makeTownHouseRequestAddress(townHouse));
+                        }
+                    } catch (JSONException e) {
+                        log.error("getResultTradingData Error!! {}", e.getMessage());
+                        return new ArrayList<>();
+                    }
+                }
+            }
+        }
+        return tradingDataList;
+    }
+
+    private TradingData getResultTradingData(String kakaoResponse, TownHouse townHouse)
+            throws JSONException {
+        TradingData tradingData = null;
+
+        JSONObject apiResponse = new JSONObject(kakaoResponse.toString());
+        JSONArray documents = new JSONArray(apiResponse.get("documents").toString());
+
+        for (int i = 0; i < documents.length(); i++) {
+            JSONObject document = (JSONObject) documents.get(i);
+
+            String addressType = String.valueOf(document.get("address_type"));
+
+            if (addressType.equals("REGION_ADDR") || addressType.equals("ROAD_ADDR")) {
+
+                JSONObject address = (JSONObject) document.get("address");
+                String bCode = String.valueOf(address.get("b_code"));
+                String fullAddress;
+                String pointX;
+                String pointY;
+                if (StringUtils.hasText(bCode) && bCode.startsWith("11350")) {
+                    pointX = String.valueOf(document.get("x"));
+                    pointY = String.valueOf(document.get("y"));
+
+                    if (addressType.equals("REGION_ADDR")) {
+                        fullAddress = String.valueOf(address.get("address_name"));
+                    } else {
+                        JSONObject roadAddress = (JSONObject) document.get("road_address");
+                        fullAddress = String.valueOf(roadAddress.get("address_name"));
+                    }
+
+                    KakaoAddrResponseDto kakaoAddrResponseDto = KakaoAddrResponseDto.builder()
+                            .fullAddress(fullAddress)
+                            .bCode(bCode)
+                            .pointX(pointX)
+                            .pointY(pointY)
+                            .build();
+                    tradingData = new TradingData(townHouse, kakaoAddrResponseDto);
+                    break;
+                }
+            }
+        }
+        return tradingData;
+    }
+
+    private String makeTownHouseRequestAddress(TownHouse townHouse) {
+
+        return townHouse.get법정동() + " " + townHouse.get지번() + " " + townHouse.get연립다세대();
+    }
+
+    private String kakaoAPIRequest(String requestAddress) throws IOException {
+        String apiUrl = "https://dapi.kakao.com/v2/local/search/address.json";
+        String query = requestAddress; // 검색할 주소
+
+        URL url = new URL(apiUrl + "?query=" + URLEncoder.encode(query, "UTF-8"));
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Authorization", "KakaoAK " + REST_API_KEY);
+        int responseCode = conn.getResponseCode();
+        StringBuilder response = new StringBuilder();
+
+        if (responseCode >= 200 && responseCode <= 300) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String inputLine;
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+        } else {
+            System.out.println("processing not success");
+            response.append("not success");
+        }
+
+        return response.toString();
     }
 
     private String publicDataInsert(String requestURL) throws IOException {
@@ -96,7 +239,7 @@ public class TradingServiceImpl implements TradingService {
             JsonNode jsonNode = xmlMapper.readTree(xmlString.getBytes());
             JsonNode body = jsonNode.path("body");
             JsonNode items = body.path("items");
-            int totalCount = Integer.parseInt(body.path("totalCount").toString());
+            int totalCount = Integer.parseInt(String.valueOf(body.path("totalCount")).replace("\"", ""));
 
             JsonNode item = items.get("item");
 
@@ -157,7 +300,7 @@ public class TradingServiceImpl implements TradingService {
         YearMonth endYearMonth = YearMonth.parse(end, formatter);
         YearMonth now = YearMonth.now();
 
-        if (startYearMonth.isAfter(endYearMonth) || now.isAfter(startYearMonth) || now.isAfter(
+        if (startYearMonth.isAfter(endYearMonth) || now.isBefore(startYearMonth) || now.isBefore(
                 endYearMonth)) {
             return yearMonths;
         }

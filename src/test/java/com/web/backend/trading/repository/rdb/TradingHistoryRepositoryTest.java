@@ -1,7 +1,6 @@
 package com.web.backend.trading.repository.rdb;
 
 import com.web.backend.trading.domain.rdb.TradingHistory;
-import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -7,21 +7,24 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+import org.hibernate.validator.constraints.Length;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class TradingDataRequestDto {
 
     @NotBlank
-    @Min(value = 6) @Max(value = 6)
+    @Length(min = 6, max = 6)
     private String startDate;
     @NotBlank
-    @Min(value = 6) @Max(value = 6)
+    @Length(min = 6, max = 6)
     private String endDate;
     @NotBlank
-    @Min(value = 5) @Max(value = 5)
+    @Length(min = 5, max = 5)
     private String lawdCd; // "11350" 노원구
 
 }

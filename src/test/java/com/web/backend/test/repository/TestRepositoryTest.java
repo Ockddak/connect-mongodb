@@ -1,6 +1,7 @@
 package com.web.backend.test.repository;
 
-import com.web.backend.test.domain.Language;
+import com.web.backend.trading.domain.nosql.Language;
+import com.web.backend.trading.repository.nosql.TestRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,8 @@ class TestRepositoryTest {
     void findAll() {
         List<Language> all = testRepository.findAll();
         for (Language language : all) {
-            System.out.println("language.getId() = " + language.getTitle());
+            System.out.println(language.toString());
+//            System.out.println("language.getId() = " + language.getTitle());
         }
     }
 

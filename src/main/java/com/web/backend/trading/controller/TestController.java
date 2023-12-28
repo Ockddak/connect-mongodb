@@ -1,10 +1,11 @@
-package com.web.backend.test.controller;
+package com.web.backend.trading.controller;
 
-import com.web.backend.test.service.TestService;
+import com.web.backend.trading.domain.nosql.Language;
+import com.web.backend.trading.service.TestService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -12,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TestController {
 
+    private final TestService testService;
 
-    @GetMapping("api/{test}")
-    public String test(
-            @PathVariable String test
+    @GetMapping("api")
+    public List<Language> test(
     ) {
-        return test;
+        return testService.findAll();
     }
 
 }
